@@ -43,60 +43,40 @@ def evaluate_svm(sig,bkg,clf):
     return
 
 
-#sig = datasets.gen_chess('s',1000)
-#bkg = datasets.gen_chess('b',1000)
-
-#sig = datasets.gen_spiral(a=0.2, s=0, n=1000)
-#bkg = datasets.gen_spiral(a=-0.2, s=0.2, n=1000)
-
-#plot_scatter(sig,bkg)
-#plt.show()
-
-# default is C=1.0
-#clf = svm.SVC(kernel='linear',C=1.0)
-#evaluate_svm(sig,bkg,clf)
-
-# default is degree=3, coef0=0.0
-#clf = svm.SVC(kernel='poly',degree=4)
-#evaluate_svm(sig,bkg,clf)
-
-#clf = svm.SVC(kernel='rbf',C=1.0,gamma=15)
-#evaluate_svm(sig,bkg,clf)
-
 # let's do the linear version first
-#mu_s = [0.45,0.45]
-#mu_b = [-0.45,-0.45]
-#sigma_s = [0.2, 0.3]
-#sigma_b = [0.2, 0.2]
-#
-#sig = Datasets.gen_2Dgauss(mu_s,sigma_s,100)
-#bkg = Datasets.gen_2Dgauss(mu_b,sigma_b,100)
-#
-#clf = svm.SVC(kernel='linear')
-#
-#evaluate_svm(sig,bkg,clf)
-#
-## Overlaps
-#mu_s = [0.2,0.2]
-#mu_b = [-0.2,-0.2]
-#sigma_s = [0.2, 0.3]
-#sigma_b = [0.2, 0.2]
-#
-#sig = Datasets.gen_2Dgauss(mu_s,sigma_s,100)
-#bkg = Datasets.gen_2Dgauss(mu_b,sigma_b,100)
-#
-#clf = svm.SVC(kernel='linear')
-#evaluate_svm(sig,bkg,clf)
-#
-## Now for something less trivial
-#
-#sig = Datasets.gen_spiral( a=0.2, s=0, n=1000 )
-#bkg = Datasets.gen_spiral( a=-0.2, s=0.2, n=1000 )
-#
-#clf = svm.SVC(kernel='rbf')
-#
-#evaluate_svm(sig,bkg,clf)
-#
+mu_s = [0.45,0.45]
+mu_b = [-0.45,-0.45]
+sigma_s = [0.2, 0.3]
+sigma_b = [0.2, 0.2]
+
+sig = Datasets.gen_2Dgauss(mu_s,sigma_s,100)
+bkg = Datasets.gen_2Dgauss(mu_b,sigma_b,100)
+
+clf = svm.SVC(kernel='linear')
+
+evaluate_svm(sig,bkg,clf)
+
+# Overlaps
+mu_s = [0.2,0.2]
+mu_b = [-0.2,-0.2]
+sigma_s = [0.2, 0.3]
+sigma_b = [0.2, 0.2]
+
+sig = Datasets.gen_2Dgauss(mu_s,sigma_s,100)
+bkg = Datasets.gen_2Dgauss(mu_b,sigma_b,100)
+
+clf = svm.SVC(kernel='linear')
+evaluate_svm(sig,bkg,clf)
+
+# Now for something less trivial
+
+sig = Datasets.gen_spiral( a=0.2, s=0, n=1000 )
+bkg = Datasets.gen_spiral( a=-0.2, s=0.2, n=1000 )
+
+clf = svm.SVC(kernel='rbf')
+
+evaluate_svm(sig,bkg,clf)
+
 # Chessboard
 
 sig = Datasets.gen_chess('s',1000)
