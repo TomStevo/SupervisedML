@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import math
 
-def gen_gauss(mu, sigma, n):
+def gen_2Dgauss(mu, sigma, n):
     df = pd.DataFrame(np.random.normal(mu,sigma,(n,2)), columns=list('xy'))
     return df
 
@@ -20,6 +20,7 @@ def spiral_func(a,s,r,w):
     x = a*(r*math.sin(r)+math.cos(r))+w
     y = a*(math.sin(r)-r*math.cos(r))-s+w
     return x, y
+
 
 def gen_chess(cls,n):
     x = []
