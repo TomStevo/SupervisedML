@@ -1,11 +1,13 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn import svm
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn import tree
 from sklearn.utils import shuffle
 from sklearn.metrics import accuracy_score
+from scipy.stats import ks_2samp
+from sklearn.model_selection import learning_curve
+from sklearn.model_selection import ShuffleSplit
 import math
 import time
 import Datasets
@@ -33,11 +35,6 @@ def plot_contours(clf, xx, yy, **params):
     out = plt.contourf(xx, yy, Z, **params)
     return out
 
-def gen_spiral(a,s,r,w):
-    x = a*(r*math.sin(r)+math.cos(r))+w
-    y = a*(math.sin(r)-r*math.cos(r))-s+w
-    return x, y
-
 def evaluate_bdt(sig,bkg,clf):
     X = np.concatenate( [sig.values,bkg.values] )
     y = np.concatenate( [np.ones(len(sig.index)),np.zeros(len(bkg.index))] )
@@ -45,47 +42,17 @@ def evaluate_bdt(sig,bkg,clf):
     print("Training BDT")
     clf.fit(X,y)
 
-    #return
+    return
     print("Making grids")
     X0, X1 = X[:,0], X[:,1]
     xx, yy = make_meshgrid(X0,X1)
 
     print("Plotting contours")
     plot_contours(clf, xx, yy, colors=['tab:orange','tab:blue','tab:blue','tab:orange'], alpha=0.8)
-    #plot_scatter(sig,bkg,"DER_mass_MMC","DER_deltar_tau_lep")
-    plot_scatter(sig,bkg,"x","y")
+    plot_scatter(sig,bkg,"DER_mass_MMC","DER_deltar_tau_lep")
+    #plot_scatter(sig,bkg,"x","y")
     plt.show()
     return
-
-vspiral = np.vectorize(gen_spiral, excluded=['a','s'])
-
-def gen_chess(cls):
-    x = []
-    y = []
-    while len(x) < 1000:
-        r1 = np.random.uniform(0,1)
-        r2 = np.random.uniform(0,1)
-        if r1<0.25 and (r2<0.25 or (r2>0.5 and r2<0.75)):
-            if cls == 's':
-                x.append(r1)
-                y.append(r2)
-        elif r1>0.25 and r1<0.5 and ((r2>0.25 and r2<0.5) or r2>0.75):
-            if cls == 's':
-                x.append(r1)
-                y.append(r2)
-        elif r1>0.5 and r1<0.75 and (r2<0.25 or (r2>0.5 and r2<0.75)):
-            if cls == 's':
-                x.append(r1)
-                y.append(r2)
-        elif r1>0.75 and ((r2>0.25 and r2<0.5) or r2>0.75):
-            if cls == 's':
-                x.append(r1)
-                y.append(r2)
-        else:
-            if cls == 'b':
-                x.append(r1)
-                y.append(r2)
-    return x,y
 
 def errorVsTree(sig_train,bkg_train,sig_test,bkg_test,clf):
 
@@ -94,9 +61,13 @@ def errorVsTree(sig_train,bkg_train,sig_test,bkg_test,clf):
     X_test = np.concatenate( [sig_test.values,bkg_test.values] )
     y_test = np.concatenate( [np.ones(len(sig_test.index)),np.zeros(len(bkg_test.index))] )
 
-    X_train,y_train = shuffle(X_train,y_train)
-    X_test,y_test = shuffle(X_test,y_test)
+#    X_train,y_train = shuffle(X_train,y_train)
+#    X_test,y_test = shuffle(X_test,y_test)
 
+#    print(clf.decision_function(X_test))
+    
+    return
+    
     train_errors = []
     test_errors  = []
     
@@ -109,12 +80,59 @@ def errorVsTree(sig_train,bkg_train,sig_test,bkg_test,clf):
     plt.plot(range(1, n_trees + 1), train_errors, c='red', label='Train')
     plt.plot(range(1, n_trees + 1), test_errors, c='black', label='Test')
     plt.legend()
-    #plt.ylim(0.18, 0.62)
     plt.ylim(0.9*min(min(train_errors),min(test_errors)),1.1*max(max(train_errors),max(test_errors)))
     plt.ylabel('Test Error')
     plt.xlabel('Number of Trees')
     plt.show()
 
+    return
+
+def plot_output(sig_train,bkg_train,sig_test,bkg_test,clf):
+
+    n_bins = 40
+    
+    sig_train_output = clf.decision_function(sig_train.values)
+    bkg_train_output = clf.decision_function(bkg_train.values)
+
+    sig_test_output = clf.decision_function(sig_test.values)
+    bkg_test_output = clf.decision_function(bkg_test.values)
+    
+    d_min = min(sig_train_output.min(),bkg_train_output.min())
+    d_max = max(sig_train_output.max(),bkg_train_output.max())
+    
+    sig_tr,bins,_ = plt.hist(bkg_train_output,bins=n_bins,range=(d_min,d_max), color='tab:orange', label='bkg train',alpha=0.6, density=True)
+    plt.hist(sig_train_output,bins=n_bins,range=(d_min,d_max), color='tab:blue', label='sig train', alpha=0.6, density=True)
+
+    bin_centers = (bins[:-1]+bins[1:])/2
+    sig_te,_ = np.histogram(sig_test_output,bins=bins,density=True)
+    bkg_te,_ = np.histogram(bkg_test_output,bins=bins,density=True)
+
+    plt.plot(bin_centers,bkg_te, 'o', c='tab:orange', label='bkg test', alpha=0.9, markeredgecolor='k')
+    plt.plot(bin_centers,sig_te, 'o', c='tab:blue', label='sig test', alpha=0.9, markeredgecolor='k')
+
+    print(ks_2samp(sig_tr,sig_te))
+    
+    plt.legend()
+    plt.show()
+
+    return
+
+def errorVsSize(sig,bkg,clf,cv,njobs,train_sizes=np.linspace(.1, 1.0, 10)):
+
+    X = np.concatenate( [sig.values,bkg.values] )
+    y = np.concatenate( [np.ones(len(sig.index)),np.zeros(len(bkg.index))] )
+
+    X,y = shuffle(X,y)
+
+    train_sizes, train_scores, test_scores = learning_curve(clf, X, y, cv=cv, n_jobs=njobs, train_sizes=train_sizes)
+    
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+
+    print(train_scores_mean)
+    
     return
 
 def drop_neg(value):
@@ -123,38 +141,43 @@ def drop_neg(value):
 def get_class(value,cls):
     return value != cls
 
-#df = pd.read_csv("training.csv")
-#
+df = pd.read_csv("training.csv")
+
 #df = df.filter(regex='DER*|Label')
-#
-##df = df.filter(items=["DER_mass_MMC","DER_deltar_tau_lep","Label"])
-#
-#for col in df.filter(regex="DER*"):
-#    df.drop( df[ np.vectorize(drop_neg)(df[col]) ].index, inplace=True )
-#
-#sig = df.drop( df[ np.vectorize(get_class,excluded=['cls'])(value=df.Label,cls="s") ].index ).drop('Label',axis=1)
-#bkg = df.drop( df[ np.vectorize(get_class,excluded=['cls'])(value=df.Label,cls="b") ].index ).drop('Label',axis=1)
-#
-##temp_sig = sig.sample(1000)
-##temp_sig = temp_sig.filter(regex='DER*')
-##temp_bkg = bkg.sample(1000)
-##temp_bkg = temp_bkg.filter(regex='DER*')
-#
-#train_sig = sig.sample(len(sig.index)//2)
-#test_sig = sig.drop( train_sig.index, inplace=False)
-#
-#train_bkg = bkg.sample(len(bkg.index)//2)
-#test_bkg = bkg.drop( train_bkg.index, inplace=False)
-#
-#clf = AdaBoostClassifier(tree.DecisionTreeClassifier(max_depth=2),
-#                         algorithm="SAMME",
-#                         n_estimators=200)
-#
-#evaluate_bdt(train_sig,train_bkg,clf)
-#
+
+df = df.filter(items=["DER_mass_MMC","DER_deltar_tau_lep","Label"])
+
+for col in df.filter(regex="DER*"):
+    df.drop( df[ np.vectorize(drop_neg)(df[col]) ].index, inplace=True )
+
+sig = df.drop( df[ np.vectorize(get_class,excluded=['cls'])(value=df.Label,cls="s") ].index ).drop('Label',axis=1)
+bkg = df.drop( df[ np.vectorize(get_class,excluded=['cls'])(value=df.Label,cls="b") ].index ).drop('Label',axis=1)
+
+#temp_sig = sig.sample(1000)
+#temp_sig = temp_sig.filter(regex='DER*')
+#temp_bkg = bkg.sample(1000)
+#temp_bkg = temp_bkg.filter(regex='DER*')
+
+train_sig = sig.sample(len(sig.index)//2)
+test_sig = sig.drop( train_sig.index, inplace=False)
+
+train_bkg = bkg.sample(len(bkg.index)//2)
+test_bkg = bkg.drop( train_bkg.index, inplace=False)
+
+clf = AdaBoostClassifier(tree.DecisionTreeClassifier(max_depth=3),
+                         algorithm="SAMME",
+                         n_estimators=200)
+
+evaluate_bdt(train_sig,train_bkg,clf)
+
+#cv = ShuffleSplit(n_splits=5, test_size=0.2, random_state=0)
+#errorVsSize(train_sig,train_bkg,clf,cv,4)
+
+plot_output(train_sig,train_bkg,test_sig,test_bkg,clf)
+
 #errorVsTree(train_sig,train_bkg,test_sig,test_bkg,clf)
-#
-#exit()
+
+exit()
 
 # let's do the linear version first
 mu_s = [0.45,0.45]
