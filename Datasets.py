@@ -6,10 +6,10 @@ def gen_2Dgauss(mu, sigma, n):
     df = pd.DataFrame(np.random.normal(mu,sigma,(n,2)), columns=list('xy'))
     return df
 
-def gen_spiral(a,s,n):
+def gen_spiral(a,s,n,w=0.05):
     
     r_rand = np.random.uniform(0,10,n)
-    w_rand = np.random.normal(0,0.05,n)
+    w_rand = np.random.normal(0,w,n)
     
     df = pd.DataFrame()
     df['x'], df['y'] = np.vectorize(spiral_func, excluded=['a','s'])( a=a, s=s, r=r_rand, w=w_rand)
